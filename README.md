@@ -1,1 +1,1 @@
-# Kernel Combinations in Gaussian Processes for Audio Time Series Forecasting
+# Kernel Combinations in Sparse Gaussian Processes for Audio Time Series Forecasting
