@@ -3,5 +3,6 @@ Data/*
 !Data/Processing/
 Data/Processing/*
 !Data/Processing/audio_file_counts.csv
+!Data/Processing/data_example.ipynb
 
 .DS_Store
