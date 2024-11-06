@@ -1,9 +1,7 @@
-import jax as np
 import jax
 from jax import random
 import jax.numpy as np
 from jax.scipy.linalg import cho_factor,cho_solve # necessary for Cholesky factorization
-
 
 def sqexp_cov_function(X1, X2, hyperparams):
     """
