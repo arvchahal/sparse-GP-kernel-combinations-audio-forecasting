@@ -28,32 +28,18 @@ def grab_prng():
     return prng_key
 #
 
-# '''
-# Transform unconstrained hyperparameters to constrained (ensure strictly positive).
-# '''
-# def param_transform(unconstrained_hyperparams):
-#     unconstrained_hyperparams = np.array(unconstrained_hyperparams)
-#     return np.exp(unconstrained_hyperparams)
-# #
+'''
+Transform unconstrained parameters to constrained ones.
+- The first section is interpreted as unconstrained kernel weights, transformed with softmax.
+- The remaining parameters are transformed to ensure positivity.
 
-# '''
-# Transform constrained hyperparameters to unconstrained
-# '''
-# def inverse_param_transform(hyperparams):
-#     return np.log(hyperparams)
-# #
+Arguments:
+- unconstrained_params: Unconstrained hyperparameters.
+
+Returns:
+- constrained_params: Constrained hyperparameters (weights in [0, 1] summing to 1 and positive kernel parameters).
+'''
 def param_transform(unconstrained_params):
-    """
-    Transform unconstrained parameters to constrained ones.
-    - The first section is interpreted as unconstrained kernel weights, transformed with softmax.
-    - The remaining parameters are transformed to ensure positivity.
-
-    Arguments:
-    - unconstrained_params: Unconstrained hyperparameters.
-
-    Returns:
-    - constrained_params: Constrained hyperparameters (weights in [0, 1] summing to 1 and positive kernel parameters).
-    """
     unconstrained_params = np.array(unconstrained_params)
     
     # First part are the unconstrained weights for kernels
@@ -68,19 +54,20 @@ def param_transform(unconstrained_params):
     # Combine weights and other transformed parameters
     constrained_params = np.concatenate([weights, other_params])
     return constrained_params
+#
 
+'''
+Transform constrained parameters back to the unconstrained space.
+- The weights (first 2 parameters) are converted back using log transformation.
+- The remaining parameters are converted with log transformation as well.
+
+Arguments:
+- constrained_params: Constrained hyperparameters.
+
+Returns:
+- unconstrained_params: Unconstrained hyperparameters.
+'''
 def inverse_param_transform(constrained_params):
-    """
-    Transform constrained parameters back to the unconstrained space.
-    - The weights (first 2 parameters) are converted back using log transformation.
-    - The remaining parameters are converted with log transformation as well.
-
-    Arguments:
-    - constrained_params: Constrained hyperparameters.
-
-    Returns:
-    - unconstrained_params: Unconstrained hyperparameters.
-    """
     constrained_params = np.array(constrained_params)
     
     # Separate weights and other parameters
@@ -96,6 +83,7 @@ def inverse_param_transform(constrained_params):
     # Combine back into a single array
     unconstrained_params = np.concatenate([log_weights, log_other_params])
     return unconstrained_params
+#
 
 '''
 Combined kernel function for Gaussian Processes, with a weighted sum of two kernels.
@@ -110,18 +98,6 @@ Returns:
 - Covariance matrix for the combined kernel.
 '''
 def combined_kernel(X1, X2, hyperparams):
-    """
-    Combined kernel function for Gaussian Processes, with a weighted sum of two kernels.
-
-    Arguments:
-    - X1: First set of input points.
-    - X2: Second set of input points.
-    - hyperparams: List of all hyperparameters:
-      [weight_1, weight_2, noise_variance_1, signal_variance_1, length_scale_1, noise_variance_2, signal_variance_2].
-
-    Returns:
-    - Covariance matrix for the combined kernel.
-    """
     # Extract weights (first 2 elements)
     weights = hyperparams[:2]
     
@@ -136,6 +112,7 @@ def combined_kernel(X1, X2, hyperparams):
     # Combine with weights
     combined_cov = weights[0] * K_sqexp + weights[1] * K_linear
     return combined_cov
+#
 
 '''
 Initialize inducing points as a subset of the training data.
@@ -211,36 +188,37 @@ def sparse_gp_posterior_predictive(X_star, X_train, Y_train, Z, hyperparams):
     K_ZZ = combined_kernel(Z, Z, hyperparams) + 1e-6 * np.eye(Z.shape[0])  # Shape (N_inducing, N_inducing), with jitter
     K_starZ = combined_kernel(X_star, Z, hyperparams)  # Shape (N_test, N_inducing)
 
-    print("K_XZ shape:", K_XZ.shape)
-    print("K_ZZ shape:", K_ZZ.shape)
-    print("K_starZ shape:", K_starZ.shape)
+    # print("K_XZ shape:", K_XZ.shape)
+    # print("K_ZZ shape:", K_ZZ.shape)
+    # print("K_starZ shape:", K_starZ.shape)
     
     # Cholesky factorization of K_ZZ
     L_ZZ, lower = cho_factor(K_ZZ, lower=True)
     
     # Compute A, which is used in posterior mean and variance calculations
     A = cho_solve((L_ZZ, lower), K_XZ.T)  # Shape (N_inducing, N_train)
-    print("A shape:", A.shape)
+    # print("A shape:", A.shape)
     
     # Compute B, used to solve for alpha
     B = np.dot(K_XZ, A) + noise_variance * np.eye(X_train.shape[0])  # Shape (N_train, N_train)
-    print("B shape:", B.shape)
+    # print("B shape:", B.shape)
     L_B, lower_B = cho_factor(B, lower=True)
     alpha = cho_solve((L_B, lower_B), Y_train)  # Shape (N_train,)
-    print("alpha shape:", alpha.shape)
+    # print("alpha shape:", alpha.shape)
     
     # Posterior mean calculation
     posterior_mean = np.dot(K_starZ, np.dot(A, alpha))  # Shape (N_test,)
-    print("posterior_mean shape:", posterior_mean.shape)
+    # print("posterior_mean shape:", posterior_mean.shape)
 
     # Posterior variance calculation
     v = cho_solve((L_ZZ, lower), K_starZ.T)  # Shape (N_inducing, N_test)
     posterior_cov = combined_kernel(X_star, X_star, hyperparams) - np.dot(K_starZ, v)  # Shape (N_test, N_test)
-    print("posterior_cov shape:", posterior_cov.shape)
+    # print("posterior_cov shape:", posterior_cov.shape)
     posterior_var = np.diag(posterior_cov) + noise_variance  # Shape (N_test,)
-    print("posterior_var shape:", posterior_var.shape)
+    # print("posterior_var shape:", posterior_var.shape)
 
     return posterior_mean, posterior_var
+# 
 
 '''
 Compute the negative log of the predictive density, given (1) ground-truth labels Y_test, (2) the posterior mean for the test inputs,
@@ -273,26 +251,14 @@ This function should return a 2-tuple, containing (1) the results of optimizatio
 (2) the log marginal likelihood at the last step of optimization.
 '''
 def empirical_bayes(X_train, Y_train, Z, unconstrained_hyperparams_init, step_size, T):
-    """
-    Optimizes the ELBO to learn hyperparameters of the sparse Gaussian Process.
-    
-    Arguments:
-    - X_train: Training inputs.
-    - Y_train: Training outputs.
-    - Z: Inducing points.
-    - unconstrained_hyperparams_init: Initial hyperparameters in unconstrained space.
-    - step_size: Step size for gradient descent.
-    - T: Number of gradient descent steps.
-    
-    Returns:
-    - optimized_hyperparams: Optimized hyperparameters.
-    - elbo_value: Final ELBO value.
-    """
     # Start with unconstrained hyperparameters
     unconstrained_hyperparams = unconstrained_hyperparams_init
     
     # Define the ELBO function with transformation applied
     elbo_func = lambda hp: sparse_gp_elbo(combined_kernel, X_train, Y_train, Z, param_transform(hp))
+
+    # Keep track of optimized transformed hyperparameters, ELBO values, and step count
+    history = []
     
     # Gradient ascent loop
     for t in range(T):
@@ -301,8 +267,21 @@ def empirical_bayes(X_train, Y_train, Z, unconstrained_hyperparams_init, step_si
 
         if t % 10 == 0:
             print(f"Step {t}, ELBO: {elbo_value}")
+        #
+
+        # Store the history
+            curr_history = { 
+                "step": t,
+                "elbo": elbo_value,
+                "hyperparams": param_transform(unconstrained_hyperparams)
+            }
+
+        history.append(curr_history)
+        #
+    #
 
     # Transform to constrained space at the end
     optimized_hyperparams = param_transform(unconstrained_hyperparams)
 
-    return optimized_hyperparams, elbo_value
+    return optimized_hyperparams, elbo_value, history
+#

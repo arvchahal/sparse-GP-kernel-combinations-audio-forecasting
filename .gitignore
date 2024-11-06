@@ -1,5 +1,6 @@
 data/*
 archive/*
+frames/*
 
 __pycache__/*
 
