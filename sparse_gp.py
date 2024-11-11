@@ -39,22 +39,34 @@ Arguments:
 Returns:
 - constrained_params: Constrained hyperparameters (weights in [0, 1] summing to 1 and positive kernel parameters).
 '''
+# def param_transform(unconstrained_params):
+#     unconstrained_params = np.array(unconstrained_params)
+    
+#     # First part are the unconstrained weights for kernels
+#     unconstrained_weights = unconstrained_params[:2]  # Assuming two kernels
+    
+#     # Apply softmax to get weights summing to 1
+#     weights = np.exp(unconstrained_weights) / np.sum(np.exp(unconstrained_weights))
+    
+#     # Remaining parameters are transformed with exponentiation to ensure positivity
+#     other_params = np.exp(unconstrained_params[2:])
+    
+#     # Combine weights and other transformed parameters
+#     constrained_params = np.concatenate([weights, other_params])
+#     return constrained_params
+# #
 def param_transform(unconstrained_params):
     unconstrained_params = np.array(unconstrained_params)
     
-    # First part are the unconstrained weights for kernels
-    unconstrained_weights = unconstrained_params[:2]  # Assuming two kernels
+    # Extract weights and apply only positivity constraint using exponentiation
+    weights = np.exp(unconstrained_params[:2])  # Now only ensure weights are positive
     
-    # Apply softmax to get weights summing to 1
-    weights = np.exp(unconstrained_weights) / np.sum(np.exp(unconstrained_weights))
-    
-    # Remaining parameters are transformed with exponentiation to ensure positivity
+    # Transform remaining parameters to ensure positivity
     other_params = np.exp(unconstrained_params[2:])
     
     # Combine weights and other transformed parameters
     constrained_params = np.concatenate([weights, other_params])
     return constrained_params
-#
 
 '''
 Transform constrained parameters back to the unconstrained space.
@@ -67,24 +79,35 @@ Arguments:
 Returns:
 - unconstrained_params: Unconstrained hyperparameters.
 '''
+# def inverse_param_transform(constrained_params):
+#     constrained_params = np.array(constrained_params)
+    
+#     # Separate weights and other parameters
+#     weights = constrained_params[:2]  # Assuming two kernels
+#     other_params = constrained_params[2:]
+    
+#     # Convert weights with log transformation (softmax inverse)
+#     log_weights = np.log(weights) - np.log(weights[0])  # Normalize with respect to the first weight
+    
+#     # Apply log transformation to the remaining parameters
+#     log_other_params = np.log(other_params)
+    
+#     # Combine back into a single array
+#     unconstrained_params = np.concatenate([log_weights, log_other_params])
+#     return unconstrained_params
+# #
 def inverse_param_transform(constrained_params):
     constrained_params = np.array(constrained_params)
     
-    # Separate weights and other parameters
-    weights = constrained_params[:2]  # Assuming two kernels
-    other_params = constrained_params[2:]
-    
-    # Convert weights with log transformation (softmax inverse)
-    log_weights = np.log(weights) - np.log(weights[0])  # Normalize with respect to the first weight
+    # Apply log transformation to weights (only to ensure positivity in the unconstrained space)
+    log_weights = np.log(constrained_params[:2])  # Only log transformation for weights
     
     # Apply log transformation to the remaining parameters
-    log_other_params = np.log(other_params)
+    log_other_params = np.log(constrained_params[2:])
     
     # Combine back into a single array
     unconstrained_params = np.concatenate([log_weights, log_other_params])
     return unconstrained_params
-#
-
 '''
 Combined kernel function for Gaussian Processes, with a weighted sum of two kernels.
 
@@ -136,34 +159,6 @@ Arguments:
 Returns:
 - elbo: Evidence Lower Bound (ELBO) for sparse GP.
 '''
-# def sparse_gp_elbo(combined_kernel, X_train, Y_train, Z, hyperparams):
-#     # Extract noise variance from hyperparameters
-#     noise_variance = hyperparams[1]  # Assumes first element after weight is noise variance
-    
-#     # Compute covariance matrices
-#     K_XZ = combined_kernel(X_train, Z, hyperparams)
-#     K_ZZ = combined_kernel(Z, Z, hyperparams) + 1e-6 * np.eye(Z.shape[0])  # Jitter for numerical stability
-#     K_XX_diag = np.diag(combined_kernel(X_train, X_train, hyperparams))  # Diagonal of K_XX for variance
-    
-#     # Cholesky factorization of K_ZZ
-#     L_ZZ, lower = cho_factor(K_ZZ, lower=True)
-    
-#     # Intermediate calculations for ELBO
-#     A = cho_solve((L_ZZ, lower), K_XZ.T)
-#     B = np.dot(K_XZ, A) + noise_variance * np.eye(X_train.shape[0])
-    
-#     # Cholesky factorization for B to solve for alpha
-#     L_B, lower_B = cho_factor(B, lower=True)
-#     alpha = cho_solve((L_B, lower_B), Y_train)
-    
-#     # Data fit term
-#     data_fit = -0.5 * np.dot(Y_train.T, alpha)
-#     complexity_penalty = -0.5 * np.sum(np.log(np.diag(L_B)))
-#     constant_term = -0.5 * X_train.shape[0] * np.log(2 * np.pi)
-    
-#     elbo = data_fit + complexity_penalty + constant_term
-#     return np.squeeze(elbo)
-# #
 def sparse_gp_elbo(combined_kernel, X_train, Y_train, Z, hyperparams):
     # Extract noise variance from hyperparameters
     noise_variance = hyperparams[1]  # Assumes the second element is noise variance
