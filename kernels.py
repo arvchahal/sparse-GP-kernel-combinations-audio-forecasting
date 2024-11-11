@@ -13,18 +13,14 @@ Returns:
 - Covariance matrix (shape: [N, M]).
 '''
 def sqexp_cov_function(X1, X2, hyperparams):
-    noise, signal, length = hyperparams
-    delta = 0  # optional delta value for flexibility (currently unused)
-    
-    # Compute pairwise squared distances between points in X1 and X2
+    _, signal, length = hyperparams
     diff = X1[:, np.newaxis, :] - X2[np.newaxis, :, :]
     sq_distances = np.sum(diff ** 2, axis=-1)
-
+    
     # Apply the squared-exponential kernel
     cov = signal * np.exp(-sq_distances / length)
     
     return cov
-#
 
 '''
 Linear covariance function for Gaussian Processes.
@@ -38,15 +34,10 @@ Returns:
 - Covariance matrix (shape: [N, M]).
 '''
 def linear_cov_function(X1, X2, hyperparams):
-    noise_variance, signal_variance = hyperparams
+    _, signal_variance = hyperparams
 
     # Compute the covariance as the dot product of X1 and X2, scaled by the signal variance
     cov = signal_variance * np.dot(X1, X2.T)
-
-    # Add noise to the diagonal if X1 and X2 are the same (for training data)
-    if X1.shape == X2.shape and np.all(X1 == X2):
-        cov += noise_variance * np.eye(X1.shape[0])
-    #
 
     return cov
 #

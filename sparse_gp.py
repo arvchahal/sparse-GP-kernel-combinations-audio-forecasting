@@ -136,15 +136,46 @@ Arguments:
 Returns:
 - elbo: Evidence Lower Bound (ELBO) for sparse GP.
 '''
+# def sparse_gp_elbo(combined_kernel, X_train, Y_train, Z, hyperparams):
+#     # Extract noise variance from hyperparameters
+#     noise_variance = hyperparams[1]  # Assumes first element after weight is noise variance
+    
+#     # Compute covariance matrices
+#     K_XZ = combined_kernel(X_train, Z, hyperparams)
+#     K_ZZ = combined_kernel(Z, Z, hyperparams) + 1e-6 * np.eye(Z.shape[0])  # Jitter for numerical stability
+#     K_XX_diag = np.diag(combined_kernel(X_train, X_train, hyperparams))  # Diagonal of K_XX for variance
+    
+#     # Cholesky factorization of K_ZZ
+#     L_ZZ, lower = cho_factor(K_ZZ, lower=True)
+    
+#     # Intermediate calculations for ELBO
+#     A = cho_solve((L_ZZ, lower), K_XZ.T)
+#     B = np.dot(K_XZ, A) + noise_variance * np.eye(X_train.shape[0])
+    
+#     # Cholesky factorization for B to solve for alpha
+#     L_B, lower_B = cho_factor(B, lower=True)
+#     alpha = cho_solve((L_B, lower_B), Y_train)
+    
+#     # Data fit term
+#     data_fit = -0.5 * np.dot(Y_train.T, alpha)
+#     complexity_penalty = -0.5 * np.sum(np.log(np.diag(L_B)))
+#     constant_term = -0.5 * X_train.shape[0] * np.log(2 * np.pi)
+    
+#     elbo = data_fit + complexity_penalty + constant_term
+#     return np.squeeze(elbo)
+# #
 def sparse_gp_elbo(combined_kernel, X_train, Y_train, Z, hyperparams):
     # Extract noise variance from hyperparameters
-    noise_variance = hyperparams[1]  # Assumes first element after weight is noise variance
+    noise_variance = hyperparams[1]  # Assumes the second element is noise variance
     
-    # Compute covariance matrices
+    # Compute cross-covariance and covariance matrices
     K_XZ = combined_kernel(X_train, Z, hyperparams)
     K_ZZ = combined_kernel(Z, Z, hyperparams) + 1e-6 * np.eye(Z.shape[0])  # Jitter for numerical stability
-    K_XX_diag = np.diag(combined_kernel(X_train, X_train, hyperparams))  # Diagonal of K_XX for variance
     
+    # When computing K_XX for the training data, add noise variance only to the diagonal elements
+    K_XX = combined_kernel(X_train, X_train, hyperparams)
+    K_XX_with_noise = K_XX + noise_variance * np.eye(X_train.shape[0])  # Add noise only for training data
+
     # Cholesky factorization of K_ZZ
     L_ZZ, lower = cho_factor(K_ZZ, lower=True)
     
