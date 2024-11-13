@@ -25,6 +25,7 @@ def sqexp_cov_function(X1, X2, hyperparams):
 
     if X1.shape == X2.shape and np.all(X1 == X2):
         cov += noise * np.eye(X1.shape[0])
+    #
 
     return cov
 
@@ -47,10 +48,10 @@ def linear_cov_function(X1, X2, hyperparams):
 
     if X1.shape == X2.shape and np.all(X1 == X2):
         cov += noise * np.eye(X1.shape[0])
+    #
 
     return cov
 #
-
 
 '''
 Matérn covariance function for Gaussian Processes.
@@ -81,6 +82,7 @@ def matern_cov_function(X1, X2, hyperparams):
 
     if X1.shape == X2.shape and np.all(X1 == X2):
         cov += noise * np.eye(X1.shape[0])
+    #
     
     return cov
 #
@@ -111,6 +113,16 @@ def kv_approx(nu, x):
     large_x_approx = kv_large_x_approx(x)
     return np.where(x < 5, small_x_approx, large_x_approx)
 #
+
+
+
+
+
+
+
+############################################################################################################
+# TO DO: Implement the following covariance functions: periodic and spectral mixture.
+############################################################################################################
 
 def sinusoidal(X1, X2, hyperparams):
     """
