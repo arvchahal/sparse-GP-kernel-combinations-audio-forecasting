@@ -131,7 +131,7 @@ def sinusoidal(X1, X2, hyperparams):
     Arguments:
     - X1: First set of input points (shape: [N, D] for N points in D dimensions).
     - X2: Second set of input points (shape: [M, D] for M points in D dimensions).
-    - hyperparams: List of hyperparameters [noise_variance, signal_variance, lenth_scale, period].
+    - hyperparams: List of hyperparameters [noise_variance, signal_variance, length_scale, period].
 
     Returns:
     - Covariance matrix (shape: [N, M]).
@@ -149,36 +149,48 @@ def sinusoidal(X1, X2, hyperparams):
        cov += noise * np.eye(X1.shape[0])
     return cov
 
-def spectral_mixture(X1,X2, hyperparams):
+def spectral_mixture(X1, X2, hyperparams):
     """
     Spectral Mixture covariance function for Gaussian Processes.
 
     Arguments:
     - X1: First set of input points (shape: [N, D] for N points in D dimensions).
     - X2: Second set of input points (shape: [M, D] for M points in D dimensions).
-    - hyperparams: List of hyperparameters [weights, means, variances], where each is an array of length Q.
-    - Q is the number of mixtures/spectral components we are using to represent the data
+    - hyperparams: List of hyperparameters [noise, weights, means, variances],
+                   where each of weights, means, and variances is a (Q, D) array
+                   and noise is a scalar.
 
     Returns:
     - Covariance matrix (shape: [N, M]).
     """
     # Unpack hyperparameters
-    noise, weights, means, variances = hyperparams  # Each should be an array of length Q except for the noise
-    diff = X1[:, np.newaxis, :] - X2[np.newaxis, :, :]
-    distances = np.sqrt(np.sum(diff ** 2, axis=-1))
-    kernel_matrix = np.zeros_like(distances)
-    for q in range(len(weights)):
-        w_q = weights[q]
-        mu_q = means[q]
-        v_q = variances[q]
-        # Gaussian envelope (length scale term)
-        gaussian_term = np.exp(-2 * np.pi**2 * distances**2 * v_q)
+    noise = hyperparams[0]        # Scalar
+    weights = np.array(hyperparams[1])  # Shape: [Q, D]
+    means = np.array(hyperparams[2])    # Shape: [Q, D]
+    variances = np.array(hyperparams[3])  # Shape: [Q, D]
+    
+    N, D = X1.shape
+    M, _ = X2.shape
+    
+    kernel_matrix = np.zeros((N, M))
+
+    # Loop over each spectral component
+    for q in range(weights.shape[0]):
+        w_q = weights[q]  # Shape: [D]
+        mu_q = means[q]    # Shape: [D]
+        v_q = variances[q]  # Shape: [D]
         
-        # Cosine term (periodic term)
-        cosine_term = np.cos(2 * np.pi * distances * mu_q)
-        
-        # Combine terms and accumulate in the kernel matrix
-        kernel_matrix += w_q * gaussian_term * cosine_term
-    if X1.shape == X2.shape and np.all(X1 == X2):
-       kernel_matrix += noise * np.eye(X1.shape[0])
+        # Compute Gaussian and cosine terms for each dimension
+        for d in range(D):
+            diff_d = X1[:, d][:, np.newaxis] - X2[:, d][np.newaxis, :]  # Shape: [N, M]
+            gaussian_term = np.exp(-2 * np.pi**2 * diff_d**2 * v_q[d])
+            cosine_term = np.cos(2 * np.pi * diff_d * mu_q[d])
+            
+            # Accumulate the component for the q-th mixture component in dimension d
+            kernel_matrix += w_q[d] * gaussian_term * cosine_term
+
+    # Add noise term if X1 and X2 are the same
+    if np.array_equal(X1, X2):
+        kernel_matrix += noise * np.eye(N)
+    
     return kernel_matrix
