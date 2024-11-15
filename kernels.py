@@ -59,62 +59,31 @@ Matérn covariance function for Gaussian Processes.
 Arguments:
 - X1: First set of input points (shape: [N, D] for N points in D dimensions).
 - X2: Second set of input points (shape: [M, D] for M points in D dimensions).
-- hyperparams: List of hyperparameters [noise_variance, signal_variance, length_scale, nu].
+- hyperparams: List of hyperparameters [noise_variance, signal_variance, length_scale].
+
+Note: In this implementation, nu is fixed to 3/2.
 
 Returns:
 - Covariance matrix (shape: [N, M]).
-fix nu do not learn it 
 '''
 def matern_cov_function(X1, X2, hyperparams):
-    noise, signal, length_scales, nu = hyperparams
+    noise, signal, length_scale = hyperparams
 
-    # Compute the pairwise squared distances
+    # Compute pairwise distances
     diff = X1[:, np.newaxis, :] - X2[np.newaxis, :, :]
-    pair_matr = np.sqrt(np.sum(diff ** 2, axis=-1))
+    r = np.sqrt(np.sum(diff ** 2, axis=-1))  # Euclidean distance
 
-    # Compute the Matérn covariance
-    euc_term = np.sqrt(2 * nu) * pair_matr / length_scales
-    euc_term = np.maximum(euc_term, 1e-16)
-    
-    term1 = signal * (2 ** (1 - nu) / jax.scipy.special.gamma(nu)) * (euc_term ** nu)
-    bessel = kv_approx(nu, euc_term)
+    # Matérn kernel with nu = 3/2
+    sqrt_3_r_by_l = np.sqrt(3) * r / length_scale
+    cov = signal * (1 + sqrt_3_r_by_l) * np.exp(-sqrt_3_r_by_l)
 
-    cov = term1 * bessel
-
-    if X1.shape == X2.shape and np.all(X1 == X2):
+    # Add noise variance on the diagonal if X1 == X2
+    if np.array_equal(X1, X2):
         cov += noise * np.eye(X1.shape[0])
     #
     
     return cov
 #
-
-''' 
-Bessel function of the second kind (Kv) for Matérn covariance function.
-Approximation for small values of x.
-'''
-def kv_small_x_approx(nu, x):
-    term1 = gamma(nu) / 2 * (2 / x) ** nu
-    term2 = 1 + (x**2) / (4 * (nu - 1))
-    return term1 * term2
-#
-
-'''
-Bessel function of the second kind (Kv) for Matérn covariance function.
-Approximation for large values of x.
-'''
-def kv_large_x_approx(x):
-    return np.sqrt(np.pi / (2 * x)) * np.exp(-x)
-#
-
-''' 
-Bessel function of the second kind (Kv) for Matérn covariance function.
-'''
-def kv_approx(nu, x):
-    small_x_approx = kv_small_x_approx(nu, x)
-    large_x_approx = kv_large_x_approx(x)
-    return np.where(x < 5, small_x_approx, large_x_approx)
-#
-
 
 
 
