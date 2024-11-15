@@ -63,6 +63,7 @@ Arguments:
 
 Returns:
 - Covariance matrix (shape: [N, M]).
+fix nu do not learn it 
 '''
 def matern_cov_function(X1, X2, hyperparams):
     noise, signal, length_scales, nu = hyperparams
@@ -202,9 +203,10 @@ def spectral_mixture(X1,X2, hyperparams):
     spectral_components = len(weights)
     dims = X1.shape[1]
     kernel = np.zeros((X1.shape[0], X2.shape[0]))
-    prd = np.ones((X1.shape[0], X2.shape[0]))
+    
     for q in range(spectral_components):
         w_q = weights[q]
+        prd = np.ones((X1.shape[0], X2.shape[0]))
         for j in range(dims):
             v_qj = variances[q][j]
             m_qj = means[q][j]
@@ -213,7 +215,8 @@ def spectral_mixture(X1,X2, hyperparams):
             gauss = np.exp(-2*(np.pi**2)* (tau**2) *v_qj)
             cos = np.cos(2*np.pi*tau*m_qj)
             prd *= gauss*cos
-        kernel += prd +w_q
+        kernel += prd *w_q
     if np.array_equal(X1, X2):
         kernel += noise * np.eye(X1.shape[0])
     return kernel
+
