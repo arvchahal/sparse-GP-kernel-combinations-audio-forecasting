@@ -149,48 +149,71 @@ def sinusoidal(X1, X2, hyperparams):
        cov += noise * np.eye(X1.shape[0])
     return cov
 
-def spectral_mixture(X1, X2, hyperparams):
+def simple_spectral_mixture(X1,X2, hyperparams):
     """
     Spectral Mixture covariance function for Gaussian Processes.
 
     Arguments:
     - X1: First set of input points (shape: [N, D] for N points in D dimensions).
     - X2: Second set of input points (shape: [M, D] for M points in D dimensions).
-    - hyperparams: List of hyperparameters [noise, weights, means, variances],
-                   where each of weights, means, and variances is a (Q, D) array
-                   and noise is a scalar.
+    - hyperparams: List of hyperparameters [weights, means, variances], where each is an array of length Q.
+    - Q is the number of mixtures/spectral components we are using to represent the data
 
     Returns:
     - Covariance matrix (shape: [N, M]).
     """
     # Unpack hyperparameters
-    noise = hyperparams[0]        # Scalar
-    weights = np.array(hyperparams[1])  # Shape: [Q, D]
-    means = np.array(hyperparams[2])    # Shape: [Q, D]
-    variances = np.array(hyperparams[3])  # Shape: [Q, D]
-    
-    N, D = X1.shape
-    M, _ = X2.shape
-    
-    kernel_matrix = np.zeros((N, M))
-
-    # Loop over each spectral component
-    for q in range(weights.shape[0]):
-        w_q = weights[q]  # Shape: [D]
-        mu_q = means[q]    # Shape: [D]
-        v_q = variances[q]  # Shape: [D]
+    noise, weights, means, variances = hyperparams  # Each should be an array of length Q except for the noise
+    diff = X1[:, np.newaxis, :] - X2[np.newaxis, :, :]
+    distances = np.sqrt(np.sum(diff ** 2, axis=-1))
+    kernel_matrix = np.zeros_like(distances)
+    for q in range(len(weights)):
+        w_q = weights[q]
+        mu_q = means[q]
+        v_q = variances[q]
+        # Gaussian envelope (length scale term)
+        gaussian_term = np.exp(-2 * np.pi**2 * distances**2 * v_q)
         
-        # Compute Gaussian and cosine terms for each dimension
-        for d in range(D):
-            diff_d = X1[:, d][:, np.newaxis] - X2[:, d][np.newaxis, :]  # Shape: [N, M]
-            gaussian_term = np.exp(-2 * np.pi**2 * diff_d**2 * v_q[d])
-            cosine_term = np.cos(2 * np.pi * diff_d * mu_q[d])
-            
-            # Accumulate the component for the q-th mixture component in dimension d
-            kernel_matrix += w_q[d] * gaussian_term * cosine_term
-
-    # Add noise term if X1 and X2 are the same
-    if np.array_equal(X1, X2):
-        kernel_matrix += noise * np.eye(N)
-    
+        # Cosine term (periodic term)
+        cosine_term = np.cos(2 * np.pi * distances * mu_q)
+        
+        # Combine terms and accumulate in the kernel matrix
+        kernel_matrix += w_q * gaussian_term * cosine_term
+    if X1.shape == X2.shape and np.all(X1 == X2):
+       kernel_matrix += noise * np.eye(X1.shape[0])
     return kernel_matrix
+
+
+def spectral_mixture(X1,X2, hyperparams):
+    """
+    Spectral Mixture covariance function for Gaussian Processes.
+
+    Arguments:
+    - X1: First set of input points (shape: [N, D] for N points in D dimensions).
+    - X2: Second set of input points (shape: [M, D] for M points in D dimensions).
+    - hyperparams: List of hyperparameters [weights, means, variances], where each is an array of length Q.
+    - Q is the number of mixtures/spectral components we are using to represent the data
+
+    Returns:
+    - Covariance matrix (shape: [N, M]).
+    """
+    # Unpack hyperparameters
+    noise, weights, means, variances = hyperparams  # Each should be an array of length Q except for the noise
+    spectral_components = len(weights)
+    dims = X1.shape[1]
+    kernel = np.zeros((X1.shape[0], X2.shape[0]))
+    prd = np.ones((X1.shape[0], X2.shape[0]))
+    for q in range(spectral_components):
+        w_q = weights[q]
+        for j in range(dims):
+            v_qj = variances[q][j]
+            m_qj = means[q][j]
+            diff = X1[:, np.newaxis, :] - X2[np.newaxis, :, :]
+            tau = np.sqrt(np.sum(diff ** 2, axis=-1))
+            gauss = np.exp(-2*(np.pi**2)* (tau**2) *v_qj)
+            cos = np.cos(2*np.pi*tau*m_qj)
+            prd *= gauss*cos
+        kernel += prd +w_q
+    if np.array_equal(X1, X2):
+        kernel += noise * np.eye(X1.shape[0])
+    return kernel
