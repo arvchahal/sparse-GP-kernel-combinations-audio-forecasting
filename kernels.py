@@ -112,7 +112,6 @@ Returns:
 '''
 def spectral_mix_cov_function(X1, X2, hyperparams):
     # Extract noise variance and number of mixtures
-    noise_variance = hyperparams[0]
     num_mixtures = int(hyperparams[1])
     dims = X1.shape[1]
 
@@ -126,7 +125,7 @@ def spectral_mix_cov_function(X1, X2, hyperparams):
         # Extract means (dims elements)
         means.append(hyperparams[idx:idx + dims])
         idx += dims
-        
+
         # Extract variances (dims elements)
         variances.append(hyperparams[idx:idx + dims])
         idx += dims
