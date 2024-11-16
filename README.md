@@ -3,9 +3,7 @@
 ## Data: TBD
 
 # TODO:
-- update with all kernels we aim to implement
-- verify all kernels work on simple 2d
-- verify it works on data similar to the problem we have 
-- test on our own problem data
-- determine what tests/experiments we will run (3 or 4) and what we will report
-- clean up code
+- fix EB in pytrees to unconstrain mean in SM kernel
+- verify EB works on simple2D
+- run experiemnt 1 and experiment 2
+- report, slides, deliverables (code and readme)
