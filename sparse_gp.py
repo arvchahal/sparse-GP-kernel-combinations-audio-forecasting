@@ -42,7 +42,6 @@ def param_transform(unconstrained_params):
     return np.exp(unconstrained_params)
 #
 
-
 ''' 
 Inverse transform constrained parameters back to unconstrained space.
 
@@ -68,25 +67,27 @@ Returns:
 - Covariance matrix for the combined kernel.
 '''
 def combined_kernel(X1, X2, hyperparams):
-    # Extract weights (first 4 elements)
-    weights = hyperparams[:4]
+    # Extract weights (first 5 elements)
+    weights = hyperparams[:5]
 
     # Kernel hyperparameters for each individual kernel
     hyperparams_sqexp = hyperparams[3:6]   # [noise_variance, signal_variance, length_scale]
     hyperparams_linear = hyperparams[6:8]  # [noise_variance, signal_variance]
     hyperparams_matern = hyperparams[8:11] # [noise_variance, signal_variance, length_scale]
     hyperparams_sinusoidal = hyperparams[11:15] # [noise_variance, signal_variance, length_scale, period]
+    hyperparams_spectral_mixture = hyperparams[15:] # [noise_variance, weight, mean, variance]
 
     # Compute each kernel's covariance
     K_sqexp = sqexp_cov_function(X1, X2, hyperparams_sqexp)
     K_linear = linear_cov_function(X1, X2, hyperparams_linear)
     K_matern = matern_cov_function(X1, X2, hyperparams_matern)
     K_sinusoidal = sinusoidal_cov_function(X1, X2, hyperparams_sinusoidal)
+    K_spectral_mixture = spectral_mix_cov_function(X1, X2, hyperparams_spectral_mixture)
 
     # Combine with weights
     combined_cov = 0
     for i, weight in enumerate(weights):
-        combined_cov += weight * [K_sqexp, K_linear, K_matern, K_sinusoidal][i]
+        combined_cov += weight * [K_sqexp, K_linear, K_matern, K_sinusoidal, K_spectral_mixture][i]
     #
 
     return combined_cov
@@ -114,12 +115,12 @@ Arguments:
 Returns:
 - elbo: Evidence Lower Bound (ELBO) for sparse GP.
 '''
-def sparse_gp_elbo(combined_kernel, X_train, Y_train, Z, hyperparams, lambda_reg=0.1):
-    # Extract kernel weights and individual noise variances
-    weights = hyperparams[:3]
+def sparse_gp_elbo(combined_kernel, X_train, Y_train, Z, hyperparams):
+    # Extract the 5 weights for each kernel
+    weights = hyperparams[:5]   
 
     # Extract noise variances for each kernel
-    noise_indices = [3, 6, 8]
+    noise_indices = [3, 6, 8, 11, 15]
     noises = [hyperparams[i] for i in noise_indices]
     noise_variance = np.average(np.array(noises))
     
@@ -167,10 +168,10 @@ Returns:
 '''
 def sparse_gp_posterior_predictive(X_star, X_train, Y_train, Z, hyperparams):
     # Extract kernel weights and individual noise variances
-    weights = hyperparams[:3]
+    weights = hyperparams[:5]
     
     # Extract noise variances for each kernel
-    noise_indices = [3, 6, 8]
+    noise_indices = [3, 6, 8, 11, 15]
     noises = [hyperparams[i] for i in noise_indices]
     noise_variance = np.average(np.array(noises))
 
@@ -231,12 +232,12 @@ T is the number of steps of gradient ascent to take.
 This function should return a 2-tuple, containing (1) the results of optimization (unconstrained hyperparameters), and
 (2) the log marginal likelihood at the last step of optimization.
 '''
-def empirical_bayes(X_train, Y_train, Z, unconstrained_hyperparams_init, step_size, T, lambda_reg=0.5):
+def empirical_bayes(X_train, Y_train, Z, unconstrained_hyperparams_init, step_size, T):
     # Start with unconstrained hyperparameters
     unconstrained_hyperparams = unconstrained_hyperparams_init
     
     # Define the ELBO function with transformation applied and regularization term
-    elbo_func = lambda hp: sparse_gp_elbo(combined_kernel, X_train, Y_train, Z, param_transform(hp), lambda_reg)
+    elbo_func = lambda hp: sparse_gp_elbo(combined_kernel, X_train, Y_train, Z, param_transform(hp))
 
     # Keep track of optimized transformed hyperparameters, ELBO values, and step count
     history = []

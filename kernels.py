@@ -111,12 +111,12 @@ Returns:
 - Covariance matrix (shape: [N, M]).
 '''
 def spectral_mix_cov_function(X1, X2, hyperparams):
-    # Extract noise variance and number of mixtures
-    num_mixtures = int(hyperparams[1])
     dims = X1.shape[1]
+    num_mixtures = int((len(hyperparams) - 1) / (2 * dims + 1))
 
+    # Extract weights, means, and variances
     weights, means, variances = [], [], []
-    idx = 2  # Start after noise and num_mixtures
+    idx = 1  # Start after noise and num_mixtures
     for _ in range(num_mixtures):
         # Extract weight
         weights.append(hyperparams[idx])
