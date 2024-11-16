@@ -111,9 +111,11 @@ Arguments:
 Returns:
 - Covariance matrix (shape: [N, M]).
 '''
-def spectral_mixture(X1,X2, hyperparams):
+def spectral_mix_cov_function(X1,X2, hyperparams):
     # Unpack hyperparameters
-    noise, weights, means, variances = hyperparams  # Each should be an array of length Q except for the noise
+    # Each should be an array of length Q except for the noise
+    _, weights, means, variances = hyperparams 
+
     spectral_components = len(weights)
     dims = X1.shape[1]
     kernel = np.zeros((X1.shape[0], X2.shape[0]))
@@ -129,9 +131,10 @@ def spectral_mixture(X1,X2, hyperparams):
             gauss = np.exp(-2*(np.pi**2)* (tau**2) *v_qj)
             cos = np.cos(2*np.pi*tau*m_qj)
             prd *= gauss*cos
+        #
         kernel += prd *w_q
-    if np.array_equal(X1, X2):
-        kernel += noise * np.eye(X1.shape[0])
+    #
+
     return kernel
 #
 
