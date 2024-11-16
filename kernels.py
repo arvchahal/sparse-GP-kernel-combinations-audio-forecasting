@@ -105,8 +105,7 @@ Spectral Mixture covariance function for Gaussian Processes.
 Arguments:
 - X1: First set of input points (shape: [N, D] for N points in D dimensions).
 - X2: Second set of input points (shape: [M, D] for M points in D dimensions).
-- hyperparams: List of hyperparameters [weights, means, variances], where each is an array of length Q.
-- Q is the number of mixtures/spectral components we are using to represent the data
+- hyperparams: List of hyperparameters [noise, weight0, mean0, variance0, weight1, mean1, variance1, ...].
 
 Returns:
 - Covariance matrix (shape: [N, M]).
@@ -114,7 +113,12 @@ Returns:
 def spectral_mix_cov_function(X1,X2, hyperparams):
     # Unpack hyperparameters
     # Each should be an array of length Q except for the noise
-    _, weights, means, variances = hyperparams 
+    weights, means, variances = [], [], []
+    for i in range(1, len(hyperparams), 3):
+        weights.append(hyperparams[i])
+        means.append(hyperparams[i+1])
+        variances.append(hyperparams[i+2])
+    #
 
     spectral_components = len(weights)
     dims = X1.shape[1]
@@ -128,7 +132,7 @@ def spectral_mix_cov_function(X1,X2, hyperparams):
             m_qj = means[q][j]
             diff = X1[:, np.newaxis, :] - X2[np.newaxis, :, :]
             tau = np.sqrt(np.sum(diff ** 2, axis=-1))
-            gauss = np.exp(-2*(np.pi**2)* (tau**2) *v_qj)
+            gauss = np.exp(-2*(np.pi**2)* (tau**2) / v_qj)
             cos = np.cos(2*np.pi*tau*m_qj)
             prd *= gauss*cos
         #
