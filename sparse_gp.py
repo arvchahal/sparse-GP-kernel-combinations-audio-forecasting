@@ -68,21 +68,26 @@ Returns:
 - Covariance matrix for the combined kernel.
 '''
 def combined_kernel(X1, X2, hyperparams):
-    # Extract weights (first 2 elements)
-    weights = hyperparams[:3]
+    # Extract weights (first 4 elements)
+    weights = hyperparams[:4]
 
     # Kernel hyperparameters for each individual kernel
-    hyperparams_sqexp = hyperparams[3:6]   # [noise_variance_1, signal_variance_1, length_scale_1]
-    hyperparams_linear = hyperparams[6:8]  # [noise_variance_2, signal_variance_2]
-    hyperparams_matern = hyperparams[8:12] # [noise_variance_3, signal_variance_3, length_scale_3, nu]
+    hyperparams_sqexp = hyperparams[3:6]   # [noise_variance, signal_variance, length_scale]
+    hyperparams_linear = hyperparams[6:8]  # [noise_variance, signal_variance]
+    hyperparams_matern = hyperparams[8:11] # [noise_variance, signal_variance, length_scale]
+    hyperparams_sinusoidal = hyperparams[11:15] # [noise_variance, signal_variance, length_scale, period]
 
     # Compute each kernel's covariance
     K_sqexp = sqexp_cov_function(X1, X2, hyperparams_sqexp)
     K_linear = linear_cov_function(X1, X2, hyperparams_linear)
     K_matern = matern_cov_function(X1, X2, hyperparams_matern)
+    K_sinusoidal = sinusoidal_cov_function(X1, X2, hyperparams_sinusoidal)
 
     # Combine with weights
-    combined_cov = weights[0] * K_sqexp + weights[1] * K_linear + weights[2] * K_matern
+    combined_cov = 0
+    for i, weight in enumerate(weights):
+        combined_cov += weight * [K_sqexp, K_linear, K_matern, K_sinusoidal][i]
+    #
 
     return combined_cov
 #

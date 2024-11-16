@@ -84,19 +84,18 @@ Arguments:
 Returns:
 - Covariance matrix (shape: [N, M]).
 '''
-def sinusoidal(X1, X2, hyperparams):
-    noise, signal, length_scale, period = hyperparams
+def sinusoidal_cov_function(X1, X2, hyperparams):
+    _, signal, length_scale, period = hyperparams
+
+    # Compute the pairwise distances
     diff = X1[:, np.newaxis, :] - X2[np.newaxis, :, :]
     distances = np.sqrt(np.sum(diff ** 2, axis=-1))
     denominator = length_scale**2
 
-
     inner_sine = (np.pi *(distances)) / period
     numerator = -2 * (np.sin(inner_sine))**2
     cov = signal * np.exp(- (numerator/denominator))
-    if X1.shape == X2.shape and np.all(X1 == X2):
-       cov += noise * np.eye(X1.shape[0])
-    #
+
     return cov
 #
 
