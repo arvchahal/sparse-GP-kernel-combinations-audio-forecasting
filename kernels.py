@@ -105,36 +105,41 @@ Spectral Mixture covariance function for Gaussian Processes.
 Arguments:
 - X1: First set of input points (shape: [N, D] for N points in D dimensions).
 - X2: Second set of input points (shape: [M, D] for M points in D dimensions).
-- hyperparams: List of hyperparameters [noise, dims, weight0, mean0, variance0, weight1, mean1, variance1, ...].
+- hyperparams: List of hyperparameters [noise, num_components, weight0, mean0, variance0, weight1, mean1, variance1, ...].
 
 Returns:
 - Covariance matrix (shape: [N, M]).
 '''
-def spectral_mix_cov_function(X1,X2, hyperparams):
-    # Extract number of dimensions
-    dims = int(hyperparams[1])
+def spectral_mix_cov_function(X1, X2, hyperparams):
+    # Extract noise variance and number of mixtures
+    noise_variance = hyperparams[0]
+    num_mixtures = int(hyperparams[1])
+    dims = X1.shape[1]
 
-    # Extract weights, means, and variances
     weights, means, variances = [], [], []
-    idx = 2
-    while idx < len(hyperparams):
-        weights.append(hyperparams[idx])  # Single weight for this component
+    idx = 2  # Start after noise and num_mixtures
+    for _ in range(num_mixtures):
+        # Extract weight
+        weights.append(hyperparams[idx])
         idx += 1
-        means.append(hyperparams[idx:idx + dims])  # Mean vector
-        idx += dims
-        variances.append(hyperparams[idx:idx + dims])  # Variance vector
-        idx += dims
 
-    # Convert to arrays for compatibility with JAX
+        # Extract means (dims elements)
+        means.append(hyperparams[idx:idx + dims])
+        idx += dims
+        
+        # Extract variances (dims elements)
+        variances.append(hyperparams[idx:idx + dims])
+        idx += dims
+    #
+
+    # Convert to arrays
     weights = np.array(weights)
     means = np.array(means)
     variances = np.array(variances)
 
     # Initialize the kernel matrix
     kernel = np.zeros((X1.shape[0], X2.shape[0]))
-
-    # Compute the covariance matrix
-    for q in range(len(weights)):
+    for q in range(num_mixtures):
         w_q = weights[q]
         prd = np.ones((X1.shape[0], X2.shape[0]))
         for j in range(dims):
