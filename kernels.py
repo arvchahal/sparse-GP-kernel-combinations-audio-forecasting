@@ -105,26 +105,36 @@ Spectral Mixture covariance function for Gaussian Processes.
 Arguments:
 - X1: First set of input points (shape: [N, D] for N points in D dimensions).
 - X2: Second set of input points (shape: [M, D] for M points in D dimensions).
-- hyperparams: List of hyperparameters [noise, weight0, mean0, variance0, weight1, mean1, variance1, ...].
+- hyperparams: List of hyperparameters [noise, dims, weight0, mean0, variance0, weight1, mean1, variance1, ...].
 
 Returns:
 - Covariance matrix (shape: [N, M]).
 '''
 def spectral_mix_cov_function(X1,X2, hyperparams):
-    # Unpack hyperparameters
-    # Each should be an array of length Q except for the noise
-    weights, means, variances = [], [], []
-    for i in range(1, len(hyperparams), 3):
-        weights.append(hyperparams[i])
-        means.append(hyperparams[i+1])
-        variances.append(hyperparams[i+2])
-    #
+    # Extract number of dimensions
+    dims = int(hyperparams[1])
 
-    spectral_components = len(weights)
-    dims = X1.shape[1]
+    # Extract weights, means, and variances
+    weights, means, variances = [], [], []
+    idx = 2
+    while idx < len(hyperparams):
+        weights.append(hyperparams[idx])  # Single weight for this component
+        idx += 1
+        means.append(hyperparams[idx:idx + dims])  # Mean vector
+        idx += dims
+        variances.append(hyperparams[idx:idx + dims])  # Variance vector
+        idx += dims
+
+    # Convert to arrays for compatibility with JAX
+    weights = np.array(weights)
+    means = np.array(means)
+    variances = np.array(variances)
+
+    # Initialize the kernel matrix
     kernel = np.zeros((X1.shape[0], X2.shape[0]))
-    
-    for q in range(spectral_components):
+
+    # Compute the covariance matrix
+    for q in range(len(weights)):
         w_q = weights[q]
         prd = np.ones((X1.shape[0], X2.shape[0]))
         for j in range(dims):
@@ -132,11 +142,11 @@ def spectral_mix_cov_function(X1,X2, hyperparams):
             m_qj = means[q][j]
             diff = X1[:, np.newaxis, :] - X2[np.newaxis, :, :]
             tau = np.sqrt(np.sum(diff ** 2, axis=-1))
-            gauss = np.exp(-2*(np.pi**2)* (tau**2) / v_qj)
-            cos = np.cos(2*np.pi*tau*m_qj)
-            prd *= gauss*cos
+            gauss = np.exp(-2 * (np.pi**2) * (tau**2) / v_qj)
+            cos = np.cos(2 * np.pi * tau * m_qj)
+            prd *= gauss * cos
         #
-        kernel += prd *w_q
+        kernel += prd * w_q
     #
 
     return kernel
@@ -176,4 +186,3 @@ def simple_spectral_mixture(X1,X2, hyperparams):
        kernel_matrix += noise * np.eye(X1.shape[0])
     return kernel_matrix
 #
-
