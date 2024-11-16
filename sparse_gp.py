@@ -39,29 +39,7 @@ Returns:
 - constrained_params: Transformed parameters in constrained space.
 '''
 def param_transform(unconstrained_params):
-    unconstrained_params = np.array(unconstrained_params)
-    
-    # Break down the unconstrained parameters into individual components
-    weights = np.exp(unconstrained_params[:3])  # Ensure weights are positive
-    noise_sqexp = 0.01 + np.exp(unconstrained_params[3])  # Ensure noise > 0.02
-    hyperparams_sqexp = np.exp(unconstrained_params[4:6])  # Ensure positive hyperparameters
-    noise_linear = 0.01 + np.exp(unconstrained_params[6])  # Ensure noise > 0.02
-    hyperparams_linear = np.exp(unconstrained_params[7])  # Ensure positive
-    noise_matern = 0.01 + np.exp(unconstrained_params[8])  # Ensure noise > 0.02
-    hyperparams_matern = np.exp(unconstrained_params[9:])  # Ensure positive hyperparameters
-
-    # Concatenate all transformed parameters back into a single array
-    constrained_params = np.concatenate([
-        weights, 
-        np.array([noise_sqexp]), 
-        hyperparams_sqexp, 
-        np.array([noise_linear]), 
-        np.array([hyperparams_linear]), 
-        np.array([noise_matern]), 
-        hyperparams_matern
-    ])
-    
-    return constrained_params
+    return np.exp(unconstrained_params)
 #
 
 
@@ -75,29 +53,7 @@ Returns:
 - unconstrained_params: Transformed parameters in unconstrained space.
 '''
 def inverse_param_transform(constrained_params):
-    constrained_params = np.array(constrained_params)
-    
-    # Break down the constrained parameters into individual components
-    weights = np.log(constrained_params[:3])  # Undo exp for weights
-    noise_sqexp = np.log(constrained_params[3] - 0.01)  # Undo exp and shift for noise_sqexp
-    hyperparams_sqexp = np.log(constrained_params[4:6])  # Undo exp for hyperparameters_sqexp
-    noise_linear = np.log(constrained_params[6] - 0.01)  # Undo exp and shift for noise_linear
-    hyperparams_linear = np.log(constrained_params[7])  # Undo exp for hyperparams_linear
-    noise_matern = np.log(constrained_params[8] - 0.01)  # Undo exp and shift for noise_matern
-    hyperparams_matern = np.log(constrained_params[9:])  # Undo exp for hyperparams_matern
-
-    # Concatenate all inverted parameters back into a single array
-    unconstrained_params = np.concatenate([
-        weights, 
-        np.array([noise_sqexp]), 
-        hyperparams_sqexp, 
-        np.array([noise_linear]), 
-        np.array([hyperparams_linear]), 
-        np.array([noise_matern]), 
-        hyperparams_matern
-    ])
-    
-    return unconstrained_params
+    return np.log(constrained_params)
 #
 
 '''
@@ -156,11 +112,11 @@ Returns:
 def sparse_gp_elbo(combined_kernel, X_train, Y_train, Z, hyperparams, lambda_reg=0.1):
     # Extract kernel weights and individual noise variances
     weights = hyperparams[:3]
-    noise_variance_sqexp = hyperparams[3]  # Noise for Squared-Exponential kernel
-    noise_variance_linear = hyperparams[6]  # Noise for Linear kernel
-    noise_variance_matern = hyperparams[8]  # Noise for Matérn kernel
 
-    noise_variance = noise_variance_sqexp + noise_variance_linear + noise_variance_matern
+    # Extract noise variances for each kernel
+    noise_indices = [3, 6, 8]
+    noises = [hyperparams[i] for i in noise_indices]
+    noise_variance = np.average(np.array(noises))
     
     # Compute cross-covariance and covariance matrices
     K_XZ = combined_kernel(X_train, Z, hyperparams)
@@ -207,18 +163,17 @@ Returns:
 def sparse_gp_posterior_predictive(X_star, X_train, Y_train, Z, hyperparams):
     # Extract kernel weights and individual noise variances
     weights = hyperparams[:3]
-    noise_variance_sqexp = hyperparams[3]  # Noise for Squared-Exponential kernel
-    noise_variance_linear = hyperparams[6]  # Noise for Linear kernel
-    noise_variance_matern = hyperparams[8]  # Noise for Matérn kernel
     
-    noise_variance = noise_variance_sqexp + noise_variance_linear + noise_variance_matern
+    # Extract noise variances for each kernel
+    noise_indices = [3, 6, 8]
+    noises = [hyperparams[i] for i in noise_indices]
+    noise_variance = np.average(np.array(noises))
 
     # Compute necessary covariance matrices
     K_XZ = combined_kernel(X_train, Z, hyperparams)  # Shape (N_train, N_inducing)
     K_ZZ = combined_kernel(Z, Z, hyperparams) + 1e-6 * np.eye(Z.shape[0])  # Shape (N_inducing, N_inducing), with jitter
     K_starZ = combined_kernel(X_star, Z, hyperparams)  # Shape (N_test, N_inducing)
 
-    
     # Cholesky factorization of K_ZZ
     L_ZZ, lower = cho_factor(K_ZZ, lower=True)
     
