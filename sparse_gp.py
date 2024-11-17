@@ -6,7 +6,6 @@ from jax.scipy.linalg import cho_factor,cho_solve # necessary for Cholesky facto
 from kernels import *
 
 jax.config.update("jax_enable_x64", True)
-
 prng_key = random.key(0)
 
 '''
@@ -27,7 +26,6 @@ def grab_prng():
     _,prng_key = random.split(prng_key)
     return prng_key
 #
-
 
 ''' 
 Transform unconstrained parameters to constrained space.
@@ -122,7 +120,7 @@ def sparse_gp_elbo(combined_kernel, X_train, Y_train, Z, hyperparams):
     # Extract noise variances for each kernel
     noise_indices = [3, 6, 8, 11, 15]
     noises = [hyperparams[i] for i in noise_indices]
-    noise_variance = np.average(np.array(noises))
+    noise_variance = np.sum(np.array(noises))
     
     # Compute cross-covariance and covariance matrices
     K_XZ = combined_kernel(X_train, Z, hyperparams)
@@ -169,11 +167,11 @@ Returns:
 def sparse_gp_posterior_predictive(X_star, X_train, Y_train, Z, hyperparams):
     # Extract kernel weights and individual noise variances
     weights = hyperparams[:5]
-    
+
     # Extract noise variances for each kernel
     noise_indices = [3, 6, 8, 11, 15]
     noises = [hyperparams[i] for i in noise_indices]
-    noise_variance = np.average(np.array(noises))
+    noise_variance = np.sum(np.array(noises))
 
     # Compute necessary covariance matrices
     K_XZ = combined_kernel(X_train, Z, hyperparams)  # Shape (N_train, N_inducing)
