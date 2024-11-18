@@ -1,0 +1,220 @@
+import numpy as onp
+import matplotlib.pyplot as plt
+
+from sparse_gp import *
+
+''' 
+Plot sparse GP predictions with uncertainty.
+
+Arguments:
+- X_train: Training inputs.
+- Y_train: Training outputs.
+- X_test: Test inputs.
+- Y_test: Test outputs.
+- Z: Inducing points.
+- optimized_hyperparams: Optimized hyperparameters.
+- model_fn: Function that computes the posterior mean and variance.
+- show_inducing: Whether to plot the inducing points.
+'''
+def plot_sparse_gp_with_uncertainty(X_train, Y_train, X_test, Y_test, Z, optimized_hyperparams, model_fn, show_inducing=True):
+    # Ensure input arrays are two-dimensional
+    X_test = X_test.reshape(-1, 1)
+    X_train = X_train.reshape(-1, 1)
+    Z = Z.reshape(-1, 1)
+
+    # Make predictions on the test set
+    posterior_mean, posterior_var = model_fn(X_test, X_train, Y_train, Z, optimized_hyperparams)
+
+    # Compute pseudo-observations at inducing points
+    inducing_mean, _ = model_fn(Z, X_train, Y_train, Z, optimized_hyperparams)
+
+    # Convert JAX arrays to NumPy arrays
+    posterior_mean = onp.array(posterior_mean).flatten()
+    posterior_var = onp.array(posterior_var).flatten()
+    X_test = onp.array(X_test).flatten()
+    Z = onp.array(Z).flatten()
+    inducing_mean = onp.array(inducing_mean).flatten()
+
+    # Ensure variances are positive
+    posterior_var = onp.maximum(posterior_var, 1e-10)
+
+    # Plot data and predictions
+    plt.figure(figsize=(10, 6))
+    plt.scatter(X_train, Y_train, color='blue', alpha=0.7, label="Training Points")
+    plt.scatter(X_test, Y_test, color='red', alpha=0.7, label="Test Points")
+    plt.plot(X_test, posterior_mean, 'green', label="Predicted Mean")
+    plt.fill_between(X_test,
+                     posterior_mean - 1.96 * onp.sqrt(posterior_var),
+                     posterior_mean + 1.96 * onp.sqrt(posterior_var),
+                     color='green', alpha=0.2, label="95% Confidence Interval")
+
+    # Plot inducing points if show_inducing is True
+    if show_inducing:
+        plt.scatter(Z, inducing_mean, color='orange', s=100, label="Inducing Points", marker='x', zorder=5)
+    #
+
+    plt.xlabel("X")
+    plt.ylabel("Y")
+    plt.legend(loc="upper center", bbox_to_anchor=(0.5, -0.15), ncol=3, frameon=False)
+    plt.title(f"Sparse GP Prediction with Uncertainty (Inducing Points: {len(Z)})")
+    plt.show()
+#
+
+''' 
+Calculate the negative log predictive density (NLPD) for a Gaussian Process.
+
+Arguments:
+- X: Test inputs.
+- Y: Test outputs.
+- Z: Inducing points.
+- hyperparams: Optimized hyperparameters.
+- model_fn: Function that computes the posterior mean and variance.
+- X_train: Training inputs.
+- Y_train: Training outputs.
+
+Returns:
+- NLPD value.
+'''
+def calculate_nlpd(X, Y, Z, hyperparams, model_fn, X_train, Y_train):
+    noise_variance = np.sum(np.array([hyperparams[i] for i in [5, 8, 10, 13, 17]]))
+    posterior_mean, posterior_var = model_fn(X, X_train, Y_train, Z, hyperparams)
+    nlpd = neg_log_predictive_density(Y, posterior_mean, posterior_var, noise_variance)
+    return nlpd
+#
+
+'''
+Calculate Mean Squared Error (MSE) for GP predictions.
+
+Arguments:
+- Y_true: True output values (test labels).
+- Y_pred: Predicted mean values (from GP posterior mean).
+
+Returns:
+- mse: The Mean Squared Error value.
+'''
+def calculate_mse(Y_true, Y_pred):
+    # Ensure the inputs are flattened to avoid shape mismatches
+    Y_true = onp.array(Y_true).flatten()
+    Y_pred = onp.array(Y_pred).flatten()
+    
+    # Compute the MSE
+    mse = onp.mean((Y_true - Y_pred) ** 2)
+    return mse
+#
+
+''' 
+Plot the ELBO optimization process.
+
+Arguments:
+- history: List of dictionaries containing ELBO values and steps.
+'''
+def plot_elbo(history):
+    # Extract ELBO values and steps from history
+    elbo_values = [entry["elbo"] for entry in history]
+    steps = [entry["step"] for entry in history]
+    
+    # Plot the ELBO values over steps
+    plt.figure(figsize=(10, 5))
+    plt.plot(steps, elbo_values, label="ELBO", color='blue')
+    plt.xlabel("Step")
+    plt.ylabel("ELBO")
+    plt.title("ELBO Over Training Steps")
+    plt.legend()
+    plt.show()
+#
+
+
+'''
+Plot kernel hyperparameters over training steps, including individual mixtures for the spectral mixture kernel.
+Note: Only visualizes if there are changes in the particular hyperparameter.
+
+Arguments:
+- history: List of dictionaries containing step and hyperparameters.
+- num_spectral_mixtures: Number of mixtures in the spectral mixture kernel.
+- dims: Number of dimensions for the spectral mixture kernel.
+''' 
+def plot_kernel_hyperparameters(history, num_spectral_mixtures=10, dims=1):
+    # Extract training steps.
+    steps = [entry["step"] for entry in history]
+
+    # Define associated kernels, linestyles, and colors.
+    kernels = ["Squared-Exponential", "Linear", "Matern", "Sinusoidal"]
+    for i in range(num_spectral_mixtures):
+        kernels.append(f"Spectral Mixture {i + 1}")
+    #
+
+    linestyles = ['--', '-', '-.', ':']
+    colors = ['orange', 'brown', 'pink', 'gray', 'olive', 'cyan', 'magenta', 'yellow', 'teal', 'navy']
+    
+    # Function to check for changes in hyperparameters
+    def has_changes(values):
+        return not all(v == values[0] for v in values)
+    #
+
+    # Extract and check changes in hyperparameters
+    hyperparams = [        
+        ("Weight (Squared-Exponential)", [entry["hyperparams"][0] for entry in history], 'blue', '--'),
+        ("Weight (Linear)", [entry["hyperparams"][1] for entry in history], 'red', '--'),
+        ("Weight (Matern)", [entry["hyperparams"][2] for entry in history], 'green', '--'),
+        ("Weight (Sinusoidal)", [entry["hyperparams"][3] for entry in history], 'purple', '--'),
+        ("Weight (Spectral Mixture)", [entry["hyperparams"][4] for entry in history], 'black', '--'),
+        ("Signal Variance (Sq-Exp)", [entry["hyperparams"][6] for entry in history], 'blue', '-'),
+        ("Length Scale (Sq-Exp)", [entry["hyperparams"][7] for entry in history], 'blue', ':'),
+        ("Signal Variance (Linear)", [entry["hyperparams"][9] for entry in history], 'red', '-'),
+        ("Signal Variance (Matern)", [entry["hyperparams"][11] for entry in history], 'green', '-'),
+        ("Length Scale (Matern)", [entry["hyperparams"][12] for entry in history], 'green', ':'),
+        ("Signal Variance (Sinusoidal)", [entry["hyperparams"][14] for entry in history], 'purple', '-'),
+        ("Length Scale (Sinusoidal)", [entry["hyperparams"][15] for entry in history], 'purple', ':'),
+        ("Period (Sinusoidal)", [entry["hyperparams"][16] for entry in history], 'purple', '--'),
+    ]
+    
+    # Spectral Mixture kernel hyperparameters
+    sm_offset = 18  # Offset for the spectral mixture kernel parameters
+    for i in range(num_spectral_mixtures):
+        hyperparams.append((f"SM Weight {i + 1}", [entry["hyperparams"][sm_offset + i * (1 + 2 * dims)] for entry in history], colors[i], '-'))
+        for j in range(dims):
+            hyperparams.append((f"SM Mean {i + 1}, Dim {j + 1}", [entry["hyperparams"][sm_offset + 1 + i * (1 + 2 * dims) + j] for entry in history], colors[i], '--'))
+            hyperparams.append((f"SM Variance {i + 1}, Dim {j + 1}", [entry["hyperparams"][sm_offset + 1 + dims + i * (1 + 2 * dims) + j] for entry in history], colors[i], ':'))
+        #
+    #
+
+    # Separate hyperparameters that change and those that don't
+    changing_hyperparams = [(name, normalize(values), color, linestyle) for name, values, color, linestyle in hyperparams if has_changes(values)]
+    static_hyperparams = [name for name, values, _, _ in hyperparams if not has_changes(values)]
+
+    # Print unchanged hyperparameters
+    if static_hyperparams:
+        print("Unchanged Hyperparameters:")
+        for hp_name in static_hyperparams:
+            print(f" - {hp_name}")
+        # 
+    #
+
+    # Plot only changing hyperparameters
+    plt.figure(figsize=(12, 8))
+    for name, values, color, linestyle in changing_hyperparams:
+        plt.plot(steps, values, label=name, color=color, linestyle=linestyle)
+    #
+
+    # Plot configuration
+    plt.xlabel("Step")
+    plt.ylabel("Hyperparameter Value")
+    plt.title("Kernel Hyperparameters Over Training Steps (Changing Only)")
+    plt.legend(loc="upper left", bbox_to_anchor=(1.05, 1), borderaxespad=0.)
+    plt.tight_layout()
+    plt.show()
+#
+
+''' 
+Function to normalize values between 0 and 1.
+
+Arguments:
+- values: List of values to normalize.
+
+Returns:
+- List of normalized values.
+'''
+def normalize(values):
+    min_val, max_val = min(values), max(values)
+    return [(v - min_val) / (max_val - min_val) for v in values] if max_val > min_val else values
+#

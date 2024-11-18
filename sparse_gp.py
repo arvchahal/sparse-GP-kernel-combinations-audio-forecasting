@@ -69,11 +69,11 @@ def combined_kernel(X1, X2, hyperparams):
     weights = hyperparams[:5]
 
     # Kernel hyperparameters for each individual kernel
-    hyperparams_sqexp = hyperparams[3:6]   # [noise_variance, signal_variance, length_scale]
-    hyperparams_linear = hyperparams[6:8]  # [noise_variance, signal_variance]
-    hyperparams_matern = hyperparams[8:11] # [noise_variance, signal_variance, length_scale]
-    hyperparams_sinusoidal = hyperparams[11:15] # [noise_variance, signal_variance, length_scale, period]
-    hyperparams_spectral_mixture = hyperparams[15:] # [noise_variance, weight, mean, variance]
+    hyperparams_sqexp = hyperparams[5:8]   # [noise_variance, signal_variance, length_scale]
+    hyperparams_linear = hyperparams[8:10]  # [noise_variance, signal_variance]
+    hyperparams_matern = hyperparams[10:13] # [noise_variance, signal_variance, length_scale]
+    hyperparams_sinusoidal = hyperparams[13:17] # [noise_variance, signal_variance, length_scale, period]
+    hyperparams_spectral_mixture = hyperparams[17:] # [noise_variance, weight, mean..., variance...]
 
     # Compute each kernel's covariance
     K_sqexp = sqexp_cov_function(X1, X2, hyperparams_sqexp)
@@ -118,7 +118,7 @@ def sparse_gp_elbo(combined_kernel, X_train, Y_train, Z, hyperparams):
     weights = hyperparams[:5]   
 
     # Extract noise variances for each kernel
-    noise_indices = [3, 6, 8, 11, 15]
+    noise_indices = [5, 8, 10, 13, 17]
     noises = [hyperparams[i] for i in noise_indices]
     noise_variance = np.sum(np.array(noises))
     
@@ -169,7 +169,7 @@ def sparse_gp_posterior_predictive(X_star, X_train, Y_train, Z, hyperparams):
     weights = hyperparams[:5]
 
     # Extract noise variances for each kernel
-    noise_indices = [3, 6, 8, 11, 15]
+    noise_indices = [5, 8, 10, 13, 17]
     noises = [hyperparams[i] for i in noise_indices]
     noise_variance = np.sum(np.array(noises))
 

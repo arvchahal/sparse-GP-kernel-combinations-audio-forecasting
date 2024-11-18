@@ -105,7 +105,7 @@ Spectral Mixture covariance function for Gaussian Processes.
 Arguments:
 - X1: First set of input points (shape: [N, D] for N points in D dimensions).
 - X2: Second set of input points (shape: [M, D] for M points in D dimensions).
-- hyperparams: List of hyperparameters [noise, num_components, weight0, mean0, variance0, weight1, mean1, variance1, ...].
+- hyperparams: List of hyperparameters [noise, weight0, mean0, variance0, weight1, mean1, variance1, ...].
 
 Returns:
 - Covariance matrix (shape: [N, M]).
