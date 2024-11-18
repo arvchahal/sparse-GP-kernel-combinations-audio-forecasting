@@ -29,6 +29,7 @@ import numpy as np
 def split_train_test_matrix(data, train_ratio, target_column):
     """
     Splits time series data into X (features) and Y (target) for train and test sets.
+    Includes a number line (time step indices) in the features.
     
     Arguments:
     - data: numpy array, where each row is a time series with a unique identifier followed by values.
@@ -36,8 +37,8 @@ def split_train_test_matrix(data, train_ratio, target_column):
     - target_column: int, index of the column in `data` to be used as Y (output target).
     
     Returns:
-    - X_train: Training feature matrix (excluding target column).
-    - X_test: Testing feature matrix (excluding target column).
+    - X_train: Training feature matrix (excluding target column but including time step indices).
+    - X_test: Testing feature matrix (excluding target column but including time step indices).
     - y_train: Training target array (only the target column).
     - y_test: Testing target array (only the target column).
     """
@@ -50,7 +51,12 @@ def split_train_test_matrix(data, train_ratio, target_column):
 
     # Transpose to shape [num_timesteps, num_series] for training/testing split
     X = X.T
-    Y = Y
+
+    # Create the number line (time step indices)
+    time_steps = np.arange(1, X.shape[0] + 1).reshape(-1, 1)  # Shape [num_timesteps, 1]
+
+    # Add time steps as a new column to X
+    X = np.hstack((time_steps, X))  # Shape [num_timesteps, num_features + 1]
 
     # Determine split index based on the train ratio
     split_index = int(X.shape[0] * train_ratio)
@@ -81,14 +87,14 @@ def plot_time_series(X, Y, time=None, feature_names=None, target_name="Target", 
     if time is None:
         time = np.arange(X.shape[0])  # Default to indices if no time is provided
     if feature_names is None:
-        feature_names = [f"Feature {i}" for i in range(X.shape[1])]  # Default feature names
+        feature_names = [f"Feature {i - 1}" for i in range(1, X.shape[1])]  # Default feature names
 
     # Plot each feature in X
-    for i in range(X.shape[1]):
+    for i in range(1, X.shape[1]):
         plt.plot(time, X[:, i], label=feature_names[i], linestyle='--')
 
     # Plot the target variable Y
-    plt.plot(time, Y, label=target_name, linewidth=2, color='black')
+    plt.plot(time, Y, label=target_name, linewidth=2, color='purple')
 
     # Add plot labels and legend
     plt.xlabel("Time")
@@ -97,3 +103,4 @@ def plot_time_series(X, Y, time=None, feature_names=None, target_name="Target", 
     plt.legend()
     plt.grid(True)
     plt.show()
+#
