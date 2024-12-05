@@ -113,28 +113,30 @@ def plot_group(names, smoothed_values, dates, title):
     plt.grid(True)
     plt.show()
 
-
-def split_train_test_matrix(data, train_ratio, target_column):
+def split_train_test_matrix(data, train_ratio, target_column, smoothed=False):
     """
     Splits time series data into X (features) and Y (target) for train and test sets.
-    Includes a number line (time step indices) in the features.
-    
+    Handles both raw data (with identifier column) and smoothed data (without identifier).
+
     Arguments:
-    - data: numpy array, where each row is a time series with a unique identifier followed by values.
+    - data: numpy array, the input data.
     - train_ratio: float, the percentage of data to be used for training (e.g., 0.75 for 75% train).
-    - target_column: int, index of the column in `data` to be used as Y (output target).
-    
+    - target_column: int, index of the row in `data` to be used as Y (output target).
+    - smoothed: bool, whether the input data is already smoothed (no identifier column).
+
     Returns:
-    - X_train: Training feature matrix (excluding target column but including time step indices).
-    - X_test: Testing feature matrix (excluding target column but including time step indices).
-    - y_train: Training target array (only the target column).
-    - y_test: Testing target array (only the target column).
+    - X_train: Training feature matrix.
+    - X_test: Testing feature matrix.
+    - y_train: Training target array.
+    - y_test: Testing target array.
     """
-    # Separate time series values, ignoring identifiers
-    time_series_data = np.array([row[1:] for row in data], dtype=float)  # [num_series, num_timesteps]
+    if not smoothed:  # Raw data with identifier column
+        time_series_data = np.array([row[1:] for row in data], dtype=float)  # [num_series, num_timesteps]
+    else:  # Smoothed data without identifier column
+        time_series_data = data
 
     # Extract target column for Y and remove it from X
-    Y = time_series_data[target_column]  # The specific row for Y (e.g., "Google" values)
+    Y = time_series_data[target_column]  # The specific row for Y
     X = np.delete(time_series_data, target_column, axis=0)  # Remove target row from feature matrix
 
     # Transpose to shape [num_timesteps, num_series] for training/testing split
@@ -154,13 +156,6 @@ def split_train_test_matrix(data, train_ratio, target_column):
     y_train, y_test = Y[:split_index], Y[split_index:]
 
     return X_train, X_test, y_train, y_test
-
-def convert_to_numeric(arr):
-    """
-    Converts array elements to numeric, replacing non-numeric values with NaN.
-    """
-    return np.array([pd.to_numeric(x, errors='coerce') for x in arr])
-
 
 
 
@@ -199,3 +194,24 @@ def plot_time_series(X, Y, time=None, feature_names=None, target_name="Target", 
     plt.grid(True)
     plt.show()
 #
+
+def normalize_min_max(data):
+    """
+    Normalizes each time series independently using Min-Max Scaling.
+    
+    Arguments:
+    - data: numpy array of shape [num_series, num_timesteps]
+    
+    Returns:
+    - normalized_data: numpy array of the same shape as input.
+    """
+    normalized_data = np.empty_like(data, dtype=float)
+    for i in range(data.shape[0]):  # Iterate over each row (time series)
+        series = data[i]
+        min_val = np.nanmin(series)  # Ignore NaN values
+        max_val = np.nanmax(series)
+        if max_val - min_val == 0:  # Avoid division by zero for constant series
+            normalized_data[i] = series  # Keep as is
+        else:
+            normalized_data[i] = (series - min_val) / (max_val - min_val)
+    return normalized_data
