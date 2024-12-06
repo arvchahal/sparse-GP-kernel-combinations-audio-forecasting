@@ -110,51 +110,101 @@ Arguments:
 Returns:
 - Covariance matrix (shape: [N, M]).
 '''
+# def spectral_mix_cov_function(X1, X2, hyperparams):
+#     dims = X1.shape[1]
+#     num_mixtures = int((len(hyperparams) - 1) / (2 * dims + 1))
+
+#     # Extract weights, means, and variances
+#     weights, means, variances = [], [], []
+#     idx = 1  # Start after noise and num_mixtures
+#     for _ in range(num_mixtures):
+#         # Extract weight
+#         weights.append(hyperparams[idx])
+#         idx += 1
+
+#         # Extract means (dims elements)
+#         means.append(hyperparams[idx:idx + dims])
+#         idx += dims
+
+#         # Extract variances (dims elements)
+#         variances.append(hyperparams[idx:idx + dims])
+#         idx += dims
+#     #
+
+#     # Convert to arrays
+#     weights = np.array(weights)
+#     means = np.array(means)
+#     variances = np.array(variances)
+
+#     # Initialize the kernel matrix
+#     kernel = np.zeros((X1.shape[0], X2.shape[0]))
+#     for q in range(num_mixtures):
+#         w_q = weights[q]
+#         prd = np.ones((X1.shape[0], X2.shape[0]))
+#         for j in range(dims):
+#             v_qj = variances[q][j]
+#             m_qj = means[q][j]
+#             diff = X1[:, np.newaxis, :] - X2[np.newaxis, :, :]
+#             tau = np.sqrt(np.sum(diff ** 2, axis=-1))
+#             gauss = np.exp(-2 * (np.pi**2) * (tau**2) / v_qj)
+#             cos = np.cos(2 * np.pi * tau * m_qj)
+#             prd *= gauss * cos
+#         #
+#         kernel += prd * w_q
+#     #
+
+#     return kernel
+# #
+
 def spectral_mix_cov_function(X1, X2, hyperparams):
+    # X1: (N1, D)
+    # X2: (N2, D)
+    # hyperparams: [noise, w_1, m_11, ..., m_1D, v_11, ..., v_1D, w_2, ...]
+
     dims = X1.shape[1]
-    num_mixtures = int((len(hyperparams) - 1) / (2 * dims + 1))
+    # number of mixtures
+    num_mixtures = (len(hyperparams) - 1) // (2 * dims + 1)
 
-    # Extract weights, means, and variances
-    weights, means, variances = [], [], []
-    idx = 1  # Start after noise and num_mixtures
-    for _ in range(num_mixtures):
-        # Extract weight
-        weights.append(hyperparams[idx])
-        idx += 1
+    noise = hyperparams[0]
 
-        # Extract means (dims elements)
-        means.append(hyperparams[idx:idx + dims])
-        idx += dims
+    # Offsets for parsing hyperparams
+    w_start = 1
+    w_end = w_start + num_mixtures
+    weights = hyperparams[w_start:w_end]  # shape: (Q,)
 
-        # Extract variances (dims elements)
-        variances.append(hyperparams[idx:idx + dims])
-        idx += dims
-    #
+    m_start = w_end
+    m_end = m_start + num_mixtures * dims
+    means = hyperparams[m_start:m_end].reshape(num_mixtures, dims)  # shape: (Q, D)
 
-    # Convert to arrays
-    weights = np.array(weights)
-    means = np.array(means)
-    variances = np.array(variances)
+    v_start = m_end
+    v_end = v_start + num_mixtures * dims
+    variances = hyperparams[v_start:v_end].reshape(num_mixtures, dims)  # shape: (Q, D)
 
-    # Initialize the kernel matrix
-    kernel = np.zeros((X1.shape[0], X2.shape[0]))
-    for q in range(num_mixtures):
-        w_q = weights[q]
-        prd = np.ones((X1.shape[0], X2.shape[0]))
-        for j in range(dims):
-            v_qj = variances[q][j]
-            m_qj = means[q][j]
-            diff = X1[:, np.newaxis, :] - X2[np.newaxis, :, :]
-            tau = np.sqrt(np.sum(diff ** 2, axis=-1))
-            gauss = np.exp(-2 * (np.pi**2) * (tau**2) / v_qj)
-            cos = np.cos(2 * np.pi * tau * m_qj)
-            prd *= gauss * cos
-        #
-        kernel += prd * w_q
-    #
+    # Compute pairwise distances tau: (N1, N2)
+    diff = X1[:, None, :] - X2[None, :, :]  # (N1, N2, D)
+    tau = np.sqrt(np.sum(diff**2, axis=-1))  # (N1, N2)
+
+    # Expand dimensions for broadcasting:
+    # tau: (N1, N2, 1, 1)
+    tau_expanded = tau[..., None, None]
+
+    # means and variances: (1, 1, Q, D)
+    means_expanded = means[np.newaxis, np.newaxis, :, :]
+    variances_expanded = variances[np.newaxis, np.newaxis, :, :]
+
+    # Compute gauss = exp(-2 π² τ² / v_qj)
+    gauss = np.exp(-2 * (np.pi**2) * (tau_expanded**2) / variances_expanded)  # (N1, N2, Q, D)
+
+    # Compute cos = cos(2 π τ m_qj)
+    cos_terms = np.cos(2 * np.pi * tau_expanded * means_expanded)  # (N1, N2, Q, D)
+
+    # Product over dimension j: (N1, N2, Q)
+    product_over_dims = np.prod(gauss * cos_terms, axis=-1)
+
+    # Weight each mixture and sum over Q: (N1, N2)
+    kernel = np.sum(product_over_dims * weights[None, None, :], axis=-1)
 
     return kernel
-#
 
 '''
 Simple Spectral Mixture covariance function for Gaussian Processes.
