@@ -110,51 +110,51 @@ Arguments:
 Returns:
 - Covariance matrix (shape: [N, M]).
 '''
-# def spectral_mix_cov_function(X1, X2, hyperparams):
-#     dims = X1.shape[1]
-#     num_mixtures = int((len(hyperparams) - 1) / (2 * dims + 1))
+def spectral_mix_cov_function_basic(X1, X2, hyperparams):
+    dims = X1.shape[1]
+    num_mixtures = int((len(hyperparams) - 1) / (2 * dims + 1))
 
-#     # Extract weights, means, and variances
-#     weights, means, variances = [], [], []
-#     idx = 1  # Start after noise and num_mixtures
-#     for _ in range(num_mixtures):
-#         # Extract weight
-#         weights.append(hyperparams[idx])
-#         idx += 1
+    # Extract weights, means, and variances
+    weights, means, variances = [], [], []
+    idx = 1  # Start after noise and num_mixtures
+    for _ in range(num_mixtures):
+        # Extract weight
+        weights.append(hyperparams[idx])
+        idx += 1
 
-#         # Extract means (dims elements)
-#         means.append(hyperparams[idx:idx + dims])
-#         idx += dims
+        # Extract means (dims elements)
+        means.append(hyperparams[idx:idx + dims])
+        idx += dims
 
-#         # Extract variances (dims elements)
-#         variances.append(hyperparams[idx:idx + dims])
-#         idx += dims
-#     #
+        # Extract variances (dims elements)
+        variances.append(hyperparams[idx:idx + dims])
+        idx += dims
+    #
 
-#     # Convert to arrays
-#     weights = np.array(weights)
-#     means = np.array(means)
-#     variances = np.array(variances)
+    # Convert to arrays
+    weights = np.array(weights)
+    means = np.array(means)
+    variances = np.array(variances)
 
-#     # Initialize the kernel matrix
-#     kernel = np.zeros((X1.shape[0], X2.shape[0]))
-#     for q in range(num_mixtures):
-#         w_q = weights[q]
-#         prd = np.ones((X1.shape[0], X2.shape[0]))
-#         for j in range(dims):
-#             v_qj = variances[q][j]
-#             m_qj = means[q][j]
-#             diff = X1[:, np.newaxis, :] - X2[np.newaxis, :, :]
-#             tau = np.sqrt(np.sum(diff ** 2, axis=-1))
-#             gauss = np.exp(-2 * (np.pi**2) * (tau**2) / v_qj)
-#             cos = np.cos(2 * np.pi * tau * m_qj)
-#             prd *= gauss * cos
-#         #
-#         kernel += prd * w_q
-#     #
+    # Initialize the kernel matrix
+    kernel = np.zeros((X1.shape[0], X2.shape[0]))
+    for q in range(num_mixtures):
+        w_q = weights[q]
+        prd = np.ones((X1.shape[0], X2.shape[0]))
+        for j in range(dims):
+            v_qj = variances[q][j]
+            m_qj = means[q][j]
+            diff = X1[:, np.newaxis, :] - X2[np.newaxis, :, :]
+            tau = np.sqrt(np.sum(diff ** 2, axis=-1))
+            gauss = np.exp(-2 * (np.pi**2) * (tau**2) / v_qj)
+            cos = np.cos(2 * np.pi * tau * m_qj)
+            prd *= gauss * cos
+        #
+        kernel += prd * w_q
+    #
 
-#     return kernel
-# #
+    return kernel
+
 
 def spectral_mix_cov_function(X1, X2, hyperparams):
     # X1: (N1, D)
@@ -165,7 +165,6 @@ def spectral_mix_cov_function(X1, X2, hyperparams):
     # number of mixtures
     num_mixtures = (len(hyperparams) - 1) // (2 * dims + 1)
 
-    noise = hyperparams[0]
 
     # Offsets for parsing hyperparams
     w_start = 1
