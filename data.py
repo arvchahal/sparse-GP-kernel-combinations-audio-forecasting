@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 # simple functions for loading the different data groups
 
 
-
 #returns only the soccer team np array
 def load_soccer():
     data = np.load("data.npy", allow_pickle=True)
