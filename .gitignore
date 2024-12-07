@@ -1,7 +1,5 @@
 data/*
 archive/*
 frames/*
-
 __pycache__/*
-
 .DS_Store
