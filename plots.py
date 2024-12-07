@@ -246,7 +246,7 @@ def calculate_mse(Y_true, Y_pred):
     mask = onp.isfinite(Y_true) & onp.isfinite(Y_pred)
     Y_true_filtered = Y_true[mask]
     Y_pred_filtered = Y_pred[mask]
-
+    
     # Compute the MSE
     mse = onp.mean((Y_true_filtered - Y_pred_filtered) ** 2)
     return mse
@@ -272,7 +272,6 @@ def plot_elbo(history):
     plt.legend()
     plt.show()
 #
-
 
 '''
 Plot kernel hyperparameters over training steps, including individual mixtures for the spectral mixture kernel.
