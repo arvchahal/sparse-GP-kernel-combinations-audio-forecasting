@@ -55,7 +55,7 @@ Handles multi-periodic or complex frequency patterns through a Gaussian mixture 
 
 ## Sparse Gaussian Processes and Inducing Points
 
-Traditional GPs scale poorly for large datasets. Sparse GPs address this by using a set of inducing points \( M \ll N \) to approximate the full GP, reducing computational complexity from \(\mathcal{O}(N^3)\) to \(\mathcal{O}(M^2N)\).
+Traditional GPs scale poorly for large datasets with complexity on the order of O(N^3). Sparse GPs address this by using a set of inducing points M (with M << N) to reduce computational complexity to approximately O(M^2 N).
 
 **Inducing Points Visualization:**  
 This figure conceptually shows how inducing points represent a compressed summary of the data, balancing complexity and scalability.  
@@ -115,7 +115,7 @@ For more details, see our accompanying paper, *"Kernel Combinations for Sparse G
    - `test_kernels.ipynb`: Verify kernel implementations.
    - `test_simple2D.ipynb`: Run a toy scenario.
 
-3. **Visualization:**
+3. **Visualization:**  
    Use `plot.py` to generate plots and `data_imgs/` for reference images or saved figures.
 
 ## Additional Notes
