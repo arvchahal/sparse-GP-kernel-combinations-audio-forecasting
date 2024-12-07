@@ -22,7 +22,6 @@ def sqexp_cov_function(X1, X2, hyperparams):
     
     # Apply the squared-exponential kernel
     cov = signal * np.exp(-sq_distances / length)
-
     return cov
 #
 
