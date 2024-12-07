@@ -1,7 +1,6 @@
 # Kernel Combinations for Sparse Gaussian Processes in Correlated Web Traffic Forecasting
 
-## Authors
-  - Aditya Shrey & Arnav Chahal 
+**Authors**: Aditya Shrey and Arnav Chahal 
 
 This repository contains code and experiments from our research on combining multiple kernels within a Sparse Gaussian Process (GP) framework for correlated web traffic forecasting. Our approach leverages a variety of kernels—Squared Exponential, Spectral Mixture, Matérn, Linear, and Sinusoidal—to capture complex temporal patterns. By optimizing the Evidence Lower Bound (ELBO), we tune kernel weights and hyperparameters, investigating how each kernel contributes to forecast accuracy and uncertainty estimation.
 
