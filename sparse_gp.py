@@ -87,7 +87,6 @@ def combined_kernel(X1, X2, hyperparams):
     for i, weight in enumerate(weights):
         combined_cov += weight * [K_sqexp, K_linear, K_matern, K_sinusoidal, K_spectral_mixture][i]
     #
-
     return combined_cov
 #
 
