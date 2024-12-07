@@ -1,4 +1,7 @@
-# README
+# Kernel Combinations for Sparse Gaussian Processes in Correlated Web Traffic Forecasting
+
+## Authors
+  - Aditya Shrey & Arnav Chahal 
 
 This repository contains code and experiments from our research on combining multiple kernels within a Sparse Gaussian Process (GP) framework for correlated web traffic forecasting. Our approach leverages a variety of kernels—Squared Exponential, Spectral Mixture, Matérn, Linear, and Sinusoidal—to capture complex temporal patterns. By optimizing the Evidence Lower Bound (ELBO), we tune kernel weights and hyperparameters, investigating how each kernel contributes to forecast accuracy and uncertainty estimation.
 
@@ -82,25 +85,6 @@ In contrast, for datasets like Politics or Technology (not shown here), median f
 - Step size tuning affected how confidently (and how accurately) the model predicted.
 - Varying inducing points had less impact than anticipated, suggesting a broad robustness in how the sparse GP model leveraged them.
 
-## Reference Paper
-
-For more details, see our accompanying paper, *"Kernel Combinations for Sparse Gaussian Processes in Correlated Web Traffic Forecasting"*. It provides:
-
-- **Introduction:**  
-  Motivation for Sparse GPs and multiple kernels in time series forecasting.
-
-- **Related Work:**  
-  Background on kernel methods, sparse approximations, and time series synchronization.
-
-- **Methods:**  
-  Data preprocessing, model formulation, ELBO optimization, and the role of inducing points.
-
-- **Experiments:**  
-  Detailed analysis of step size, inducing points, and kernel weight optimization results.
-
-- **Discussion:**  
-  Insights into kernel combinations, uncertainty calibration, and directions for improving model interpretability and robustness.
-
 ## How to Use
 
 1. **Data Preparation:**  
@@ -117,13 +101,3 @@ For more details, see our accompanying paper, *"Kernel Combinations for Sparse G
 
 3. **Visualization:**  
    Use `plot.py` to generate plots and `data_imgs/` for reference images or saved figures.
-
-## Additional Notes
-
-- The optimization is non-convex. Expect that different initializations, step sizes, or noise parameters can lead to diverse outcomes.
-- Sparse GPs are effective for large datasets but require careful tuning of hyperparameters and kernel weights.
-- Overconfidence in some forecasts suggests future work could focus on better noise handling, priors, or adaptive kernel compositions.
-
-## License
-
-This project is for research and educational purposes. If you use our methods or code, please cite the accompanying paper.
